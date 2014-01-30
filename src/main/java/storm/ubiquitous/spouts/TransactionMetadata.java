@@ -1,6 +1,8 @@
 
 package storm.ubiquitous.spouts;
 
+import java.io.Serializable;
+
 public class TransactionMetadata implements Serializable{
     private static final long serialVersionUID = 1L;
     public int partition;

@@ -39,7 +39,7 @@ public class KafkaConsumer {
     }
  
 
-    private /*static*/ String  printMessages(ByteBufferMessageSet messageSet) throws UnsupportedEncodingException {
+    /*   private static String  printMessages(ByteBufferMessageSet messageSet) throws UnsupportedEncodingException {
 	for(MessageAndOffset messageAndOffset: messageSet) {
 	    ByteBuffer payload = messageAndOffset.message().payload();
 	    byte[] bytes = new byte[payload.limit()];
@@ -47,7 +47,7 @@ public class KafkaConsumer {
 	    return new String(bytes, "UTF-8");
 	}
     }
-  
+*/  
     public /*static*/ByteBufferMessageSet  fetchdata() throws Exception {
 	System.out.println("SimpleConsumer code....");
       
