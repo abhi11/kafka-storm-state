@@ -11,5 +11,6 @@ from maven repo :
 *     zkclient
 *     metrics-core
 *     spring-context
+
 These jars should be placed inside the lib directory of storm. The exact versions
  of the above dependencies are specified in pom.xml file.
