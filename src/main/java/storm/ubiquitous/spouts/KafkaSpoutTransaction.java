@@ -1,7 +1,10 @@
 /**
  * Transactional Spout with kafka acting as the source.
- * Takes data from a single kafka topic partition and 
- * emits it as a batch of tuple.
+ * Takes messages from a single kafka topic and 
+ * emits them as batches of tuples.
+ * Topic can be divided into as many partitions as needed and
+ * size of batch can be specified in bytes. Batches are of uniform
+ * size.
  */
 
 package storm.ubiquitous.spouts;
@@ -30,6 +33,7 @@ import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 
+@SuppressWarnings("rawtypes")
 public class KafkaSpoutTransaction extends BasePartitionedTransactionalSpout<TransactionMetadata>{
 
     @Override
@@ -60,29 +64,51 @@ public class KafkaSpoutTransaction extends BasePartitionedTransactionalSpout<Tra
 	}
     }
     public static class KafkaPartitionedEmitter implements IPartitionedTransactionalSpout.Emitter<TransactionMetadata>{
+	//Specifies the size of each batch in bytes.
+	public static int SIZE=1000;
 	@Override
 	    public TransactionMetadata emitPartitionBatchNew(TransactionAttempt tx,BatchOutputCollector collector,int partition,TransactionMetadata lastPartitionMeta){
-	    //use kafka and partition no. to fetch the data. 
-	    TransactionMetadata metadata = new TransactionMetadata(0,0L);
-	    KafkaConsumer consumer = new KafkaConsumer(partition);
+	    //each partition will have many batches depending on the size of partition
+	    //and size of every batch is same in size.
+	    //specified by SIZE variable.
+
+	    TransactionMetadata metadata = new TransactionMetadata();
+	    KafkaConsumer consumer;
+	    long startoffset=0L;
+	    long endoffset=0L;
 	    try{
+		if(lastPartitionMeta == null){
+		    //if lastPartitionMeta is null we start from offset 0.
+		    consumer = new KafkaConsumer(partition,0L,SIZE);
+		}
+		else{ 
+		    //if lastPartitionMeta is not null then we get the end offset
+		    // and start from the offset next to endoffset.
+		    consumer = new KafkaConsumer(partition,lastPartitionMeta.endoffset+1,SIZE);
+		}
 		ByteBufferMessageSet messageSet =  consumer.fetchdata();
-		//create another TransactionMetadata obj and return it to be stored by zookeeper
-		//and to be used later for replay.
 		System.out.println("Inside emitpartitionbatchnew. Fetching partition "+partition);
+
 		int flag = 0;
 		for(MessageAndOffset messageAndOffset: messageSet) {
 		    if(flag == 0){
-			long offset = messageAndOffset.offset();
-			metadata = new TransactionMetadata(partition,offset);
+			//to get the start offset of the batch.
+			startoffset = messageAndOffset.offset();
 			flag=1;
 		    }
+		    //at last iteration will contain the end offset of the batch.
+		    endoffset = messageAndOffset.offset();
 		    ByteBuffer payload = messageAndOffset.message().payload();
 		    byte[] bytes = new byte[payload.limit()];
 		    payload.get(bytes);
 		    collector.emit(new Values(tx, new String(bytes,"UTF-8")));
-		    //return new String(bytes, "UTF-8");
 		}
+
+		System.out.println(" From offset "+startoffset+" to "+endoffset);
+
+		//create another TransactionMetadata obj and return it to be stored by zookeeper
+		//and to be used later for replay.
+		metadata = new TransactionMetadata(partition,startoffset,endoffset);
 	    }
 	    catch(Exception e){
 	    }
@@ -90,21 +116,19 @@ public class KafkaSpoutTransaction extends BasePartitionedTransactionalSpout<Tra
 	}
 	@Override
 	    public void emitPartitionBatch(TransactionAttempt tx,BatchOutputCollector collector,int partition,TransactionMetadata partitionMeta){
-	    //Replays the complete partition use kafka and partition no to fetch the data 
+	    //Replays a batch from a partitoi complete partition use kafka and partition no to fetch the data 
 	    //use kafka and partition no. to fetch the data.
-	    int metapartition = partitionMeta.partition;
-	    KafkaConsumer consumer = new KafkaConsumer(metapartition);
+	    KafkaConsumer consumer = new KafkaConsumer(partitionMeta.partition,partitionMeta.startoffset,SIZE);
 	    try{
 		ByteBufferMessageSet messageSet =  consumer.fetchdata();
-		//create another TransactionMEtadata obj and return it to be stored by zookeeper
-		//and to be used later for replay.
-		System.out.println("Inside emitpartitionbatch. Fetching partition "+metapartition);
+		System.out.println("Inside emitpartitionbatch. Fetching partition "+partitionMeta.partition+"From offset "+partitionMeta.startoffset+
+				   " to "+partitionMeta.endoffset);
+
 		for(MessageAndOffset messageAndOffset: messageSet) {
 		    ByteBuffer payload = messageAndOffset.message().payload();
 		    byte[] bytes = new byte[payload.limit()];
 		    payload.get(bytes);
 		    collector.emit(new Values(tx, new String(bytes,"UTF-8")));
-		    //return new String(bytes, "UTF-8");
 		} 
 	    }
 	    catch(Exception e){
