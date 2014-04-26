@@ -4,7 +4,7 @@ kafka-storm-state
 The project uses kafka as the data source. And uses TransactionalTopologies.
 Will be later used for storing states by the bolts.
 To make storm talk with kafka following artifacts(jars) should be downloaded 
-from maven repo :
+from maven repo(See the pom.xml) :
 *     scala-library
 *     kafka_2.9.2
 *     javax.inject
