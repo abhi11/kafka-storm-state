@@ -15,7 +15,5 @@ from maven repo(See the pom.xml) :
 These jars should be placed inside the lib directory of storm. The exact versions
  of the above dependencies are specified in [pom.xml](https://github.com/abhi11/kafka-storm-state/blob/master/pom.xml) file.
 
-### To be done ###
-* Writing the kafka producer so partitions have equal no. of messages. Changing [kafka-starter](https://github.com/abhi11/kafka-starter)
-* Testing on a cluster with multiple machines.
-* Writing stateful bolts from (https://github.com/aniketalhat/StatefulBolts)
+### Note ###
+Check the repo [storm-redis](https://github.com/pict2014/storm-redis) for the complete implementation. 
